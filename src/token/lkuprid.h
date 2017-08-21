@@ -115,7 +115,7 @@ LookupAliasFromRid(
     DWORD Rid,
     LPWSTR Name,
     PDWORD cchName
-    );
+);
 
 BOOL
 LookupUserGroupFromRid(
@@ -123,4 +123,4 @@ LookupUserGroupFromRid(
     DWORD Rid,
     LPWSTR Name,
     PDWORD cchName
-    );
+);

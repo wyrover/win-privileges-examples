@@ -5,9 +5,9 @@
 * licenses this file to you under the Apache License, Version 2.0 (the
 * "License"); you may not use this file except in compliance with the License.
 * You may obtain a copy of the License at
-* 
+*
 * http://www.apache.org/licenses/LICENSE-2.0
-* 
+*
 * Unless required by applicable law or agreed to in writing, software
 * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
 * WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
@@ -19,11 +19,10 @@
 
 // List of different hardlink related command line options supported by
 // winutils.
-typedef enum HardLinkCommandOptionType
-{
-  HardLinkInvalid,
-  HardLinkCreate,
-  HardLinkStat
+typedef enum HardLinkCommandOptionType {
+    HardLinkInvalid,
+    HardLinkCreate,
+    HardLinkStat
 } HardLinkCommandOption;
 
 //----------------------------------------------------------------------------
@@ -40,33 +39,30 @@ static BOOL ParseCommandLine(__in int argc,
                              __in_ecount(argc) wchar_t *argv[],
                              __out HardLinkCommandOption *command)
 {
-  *command = HardLinkInvalid;
+    *command = HardLinkInvalid;
 
-  if (argc != 3 && argc != 4) {
-    return FALSE;
-  }
-
-  if (argc == 3) {
-    if (wcscmp(argv[0], L"hardlink") != 0 || wcscmp(argv[1], L"stat") != 0)
-    {
-      return FALSE;
+    if (argc != 3 && argc != 4) {
+        return FALSE;
     }
 
-    *command = HardLinkStat;
-  }
+    if (argc == 3) {
+        if (wcscmp(argv[0], L"hardlink") != 0 || wcscmp(argv[1], L"stat") != 0) {
+            return FALSE;
+        }
 
-  if (argc == 4) {
-    if (wcscmp(argv[0], L"hardlink") != 0 || wcscmp(argv[1], L"create") != 0)
-    {
-      return FALSE;
+        *command = HardLinkStat;
     }
 
-    *command = HardLinkCreate;
-  }
+    if (argc == 4) {
+        if (wcscmp(argv[0], L"hardlink") != 0 || wcscmp(argv[1], L"create") != 0) {
+            return FALSE;
+        }
 
-  assert(*command != HardLinkInvalid);
+        *command = HardLinkCreate;
+    }
 
-  return TRUE;
+    assert(*command != HardLinkInvalid);
+    return TRUE;
 }
 
 //----------------------------------------------------------------------------
@@ -80,32 +76,29 @@ static BOOL ParseCommandLine(__in int argc,
 // error code: otherwise
 static DWORD HardlinkStat(__in LPCWSTR fileName, __out DWORD *puHardLinkCount)
 {
-  BY_HANDLE_FILE_INFORMATION fileInformation;
-  DWORD dwErrorCode = ERROR_SUCCESS;
-  PWSTR longFileName = NULL;
+    BY_HANDLE_FILE_INFORMATION fileInformation;
+    DWORD dwErrorCode = ERROR_SUCCESS;
+    PWSTR longFileName = NULL;
+    // First convert input paths to long paths
+    //
+    dwErrorCode = ConvertToLongPath(fileName, &longFileName);
 
-  // First convert input paths to long paths
-  //
-  dwErrorCode = ConvertToLongPath(fileName, &longFileName);
-  if (dwErrorCode != ERROR_SUCCESS)
-  {
-    goto HardlinkStatExit;
-  }
+    if (dwErrorCode != ERROR_SUCCESS) {
+        goto HardlinkStatExit;
+    }
 
-  // Get file information which contains the hard link count
-  //
-  dwErrorCode = GetFileInformationByName(longFileName, FALSE, &fileInformation);
-  if (dwErrorCode != ERROR_SUCCESS)
-  {
-    goto HardlinkStatExit;
-  }
+    // Get file information which contains the hard link count
+    //
+    dwErrorCode = GetFileInformationByName(longFileName, FALSE, &fileInformation);
 
-  *puHardLinkCount = fileInformation.nNumberOfLinks;
+    if (dwErrorCode != ERROR_SUCCESS) {
+        goto HardlinkStatExit;
+    }
 
+    *puHardLinkCount = fileInformation.nNumberOfLinks;
 HardlinkStatExit:
-  LocalFree(longFileName);
-
-  return dwErrorCode;
+    LocalFree(longFileName);
+    return dwErrorCode;
 }
 
 //----------------------------------------------------------------------------
@@ -119,36 +112,33 @@ HardlinkStatExit:
 // error code: otherwise
 static DWORD HardlinkCreate(__in LPCWSTR linkName, __in LPCWSTR fileName)
 {
-  PWSTR longLinkName = NULL;
-  PWSTR longFileName = NULL;
-  DWORD dwErrorCode = ERROR_SUCCESS;
+    PWSTR longLinkName = NULL;
+    PWSTR longFileName = NULL;
+    DWORD dwErrorCode = ERROR_SUCCESS;
+    // First convert input paths to long paths
+    //
+    dwErrorCode = ConvertToLongPath(linkName, &longLinkName);
 
-  // First convert input paths to long paths
-  //
-  dwErrorCode = ConvertToLongPath(linkName, &longLinkName);
-  if (dwErrorCode != ERROR_SUCCESS)
-  {
-    goto HardlinkCreateExit;
-  }
+    if (dwErrorCode != ERROR_SUCCESS) {
+        goto HardlinkCreateExit;
+    }
 
-  dwErrorCode = ConvertToLongPath(fileName, &longFileName);
-  if (dwErrorCode != ERROR_SUCCESS)
-  {
-    goto HardlinkCreateExit;
-  }
+    dwErrorCode = ConvertToLongPath(fileName, &longFileName);
 
-  // Create the hard link
-  //
-  if (!CreateHardLink(longLinkName, longFileName, NULL))
-  {
-    dwErrorCode = GetLastError();
-  }
+    if (dwErrorCode != ERROR_SUCCESS) {
+        goto HardlinkCreateExit;
+    }
+
+    // Create the hard link
+    //
+    if (!CreateHardLink(longLinkName, longFileName, NULL)) {
+        dwErrorCode = GetLastError();
+    }
 
 HardlinkCreateExit:
-  LocalFree(longLinkName);
-  LocalFree(longFileName);
-
-  return dwErrorCode;
+    LocalFree(longLinkName);
+    LocalFree(longFileName);
+    return dwErrorCode;
 }
 
 //----------------------------------------------------------------------------
@@ -163,61 +153,53 @@ HardlinkCreateExit:
 // EXIT_FAILURE: otherwise
 int Hardlink(__in int argc, __in_ecount(argc) wchar_t *argv[])
 {
-  DWORD dwErrorCode = ERROR_SUCCESS;
-  int ret = EXIT_FAILURE;
-  HardLinkCommandOption command = HardLinkInvalid;
+    DWORD dwErrorCode = ERROR_SUCCESS;
+    int ret = EXIT_FAILURE;
+    HardLinkCommandOption command = HardLinkInvalid;
 
-  if (!ParseCommandLine(argc, argv, &command)) {
-    dwErrorCode = ERROR_INVALID_COMMAND_LINE;
-
-    fwprintf(stderr, L"Incorrect command line arguments.\n\n");
-    HardlinkUsage();
-    goto HardLinkExit;
-  }
-
-  if (command == HardLinkStat)
-  {
-    // Compute the number of hard links
-    //
-    DWORD uHardLinkCount = 0;
-    dwErrorCode = HardlinkStat(argv[2], &uHardLinkCount);
-    if (dwErrorCode != ERROR_SUCCESS)
-    {
-      ReportErrorCode(L"HardlinkStat", dwErrorCode);
-      goto HardLinkExit;
+    if (!ParseCommandLine(argc, argv, &command)) {
+        dwErrorCode = ERROR_INVALID_COMMAND_LINE;
+        fwprintf(stderr, L"Incorrect command line arguments.\n\n");
+        HardlinkUsage();
+        goto HardLinkExit;
     }
 
-    // Output the result
-    //
-    fwprintf(stdout, L"%d\n", uHardLinkCount);
+    if (command == HardLinkStat) {
+        // Compute the number of hard links
+        //
+        DWORD uHardLinkCount = 0;
+        dwErrorCode = HardlinkStat(argv[2], &uHardLinkCount);
 
-  } else if (command == HardLinkCreate)
-  {
-    // Create the hard link
-    //
-    dwErrorCode = HardlinkCreate(argv[2], argv[3]);
-    if (dwErrorCode != ERROR_SUCCESS)
-    {
-      ReportErrorCode(L"HardlinkCreate", dwErrorCode);
-      goto HardLinkExit;
+        if (dwErrorCode != ERROR_SUCCESS) {
+            ReportErrorCode(L"HardlinkStat", dwErrorCode);
+            goto HardLinkExit;
+        }
+
+        // Output the result
+        //
+        fwprintf(stdout, L"%d\n", uHardLinkCount);
+    } else if (command == HardLinkCreate) {
+        // Create the hard link
+        //
+        dwErrorCode = HardlinkCreate(argv[2], argv[3]);
+
+        if (dwErrorCode != ERROR_SUCCESS) {
+            ReportErrorCode(L"HardlinkCreate", dwErrorCode);
+            goto HardLinkExit;
+        }
+
+        // Output the success message
+        //
+        fwprintf(stdout, L"Hardlink created for %s <<===>> %s\n", argv[2], argv[3]);
+    } else {
+        // Should not happen
+        //
+        assert(FALSE);
     }
 
-    // Output the success message
-    //
-    fwprintf(stdout, L"Hardlink created for %s <<===>> %s\n", argv[2], argv[3]);
-
-  } else
-  {
-    // Should not happen
-    //
-    assert(FALSE);
-  }
-
-  ret = EXIT_SUCCESS;
-
+    ret = EXIT_SUCCESS;
 HardLinkExit:
-
-  return ret;
+    return ret;
 }
 
 void HardlinkUsage()

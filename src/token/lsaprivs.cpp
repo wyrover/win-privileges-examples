@@ -48,87 +48,84 @@ GetAccountSid(
     LPCTSTR SystemName,
     LPCTSTR AccountName,
     PSID *Sid
-    )
+)
 {
-    LPTSTR ReferencedDomain=NULL;
-    DWORD cbSid=128;    // initial allocation attempt
-    DWORD cchReferencedDomain=16; // initial allocation size
+    LPTSTR ReferencedDomain = NULL;
+    DWORD cbSid = 128;  // initial allocation attempt
+    DWORD cchReferencedDomain = 16; // initial allocation size
     SID_NAME_USE peUse;
-    BOOL bSuccess=FALSE; // assume this function will fail
+    BOOL bSuccess = FALSE; // assume this function will fail
 
     __try {
+        //
+        // initial memory allocations
+        //
+        *Sid = (PSID)HeapAlloc(GetProcessHeap(), 0, cbSid);
 
-    //
-    // initial memory allocations
-    //
-    *Sid = (PSID)HeapAlloc(GetProcessHeap(), 0, cbSid);
+        if (*Sid == NULL) __leave;
 
-    if(*Sid == NULL) __leave;
+        ReferencedDomain = (LPTSTR)HeapAlloc(
+                               GetProcessHeap(),
+                               0,
+                               cchReferencedDomain * sizeof(TCHAR)
+                           );
 
-    ReferencedDomain = (LPTSTR)HeapAlloc(
-                    GetProcessHeap(),
-                    0,
-                    cchReferencedDomain * sizeof(TCHAR)
-                    );
+        if (ReferencedDomain == NULL) __leave;
 
-    if(ReferencedDomain == NULL) __leave;
+        //
+        // Obtain the SID of the specified account on the specified system.
+        //
+        while (!LookupAccountName(
+                   SystemName,         // machine to lookup account on
+                   AccountName,        // account to lookup
+                   *Sid,               // SID of interest
+                   &cbSid,             // size of SID
+                   ReferencedDomain,   // domain account was found on
+                   &cchReferencedDomain,
+                   &peUse
+               )) {
+            if (GetLastError() == ERROR_INSUFFICIENT_BUFFER) {
+                //
+                // reallocate memory
+                //
+                *Sid = (PSID)HeapReAlloc(
+                           GetProcessHeap(),
+                           0,
+                           *Sid,
+                           cbSid
+                       );
 
-    //
-    // Obtain the SID of the specified account on the specified system.
-    //
-    while(!LookupAccountName(
-                    SystemName,         // machine to lookup account on
-                    AccountName,        // account to lookup
-                    *Sid,               // SID of interest
-                    &cbSid,             // size of SID
-                    ReferencedDomain,   // domain account was found on
-                    &cchReferencedDomain,
-                    &peUse
-                    )) {
-        if (GetLastError() == ERROR_INSUFFICIENT_BUFFER) {
-            //
-            // reallocate memory
-            //
-            *Sid = (PSID)HeapReAlloc(
-                        GetProcessHeap(),
-                        0,
-                        *Sid,
-                        cbSid
-                        );
-            if(*Sid == NULL) __leave;
+                if (*Sid == NULL) __leave;
 
-            ReferencedDomain = (LPTSTR)HeapReAlloc(
-                        GetProcessHeap(),
-                        0,
-                        ReferencedDomain,
-                        cchReferencedDomain * sizeof(TCHAR)
-                        );
-            if(ReferencedDomain == NULL) __leave;
+                ReferencedDomain = (LPTSTR)HeapReAlloc(
+                                       GetProcessHeap(),
+                                       0,
+                                       ReferencedDomain,
+                                       cchReferencedDomain * sizeof(TCHAR)
+                                   );
+
+                if (ReferencedDomain == NULL) __leave;
+            } else __leave;
         }
-        else __leave;
-    }
 
-    //
-    // Indicate success.
-    //
-    bSuccess = TRUE;
-
+        //
+        // Indicate success.
+        //
+        bSuccess = TRUE;
     } // try
+
     __finally {
+        //
+        // Cleanup and indicate failure, if appropriate.
+        //
+        HeapFree(GetProcessHeap(), 0, ReferencedDomain);
 
-    //
-    // Cleanup and indicate failure, if appropriate.
-    //
-
-    HeapFree(GetProcessHeap(), 0, ReferencedDomain);
-
-    if(!bSuccess) {
-        if(*Sid != NULL) {
-            HeapFree(GetProcessHeap(), 0, *Sid);
-            *Sid = NULL;
+        if (!bSuccess) {
+            if (*Sid != NULL) {
+                HeapFree(GetProcessHeap(), 0, *Sid);
+                *Sid = NULL;
+            }
         }
-    }
-
     } // finally
 
     return bSuccess;
@@ -140,10 +137,9 @@ SetPrivilegeOnAccount(
     PSID AccountSid,            // SID to grant privilege to
     LPWSTR PrivilegeName,       // privilege to grant (Unicode)
     BOOL bEnable                // enable or disable
-    )
+)
 {
     LSA_UNICODE_STRING PrivilegeString;
-
     //
     // Create a LSA_UNICODE_STRING for the privilege name.
     //
@@ -152,22 +148,21 @@ SetPrivilegeOnAccount(
     //
     // grant or revoke the privilege, accordingly
     //
-    if(bEnable) {
+    if (bEnable) {
         return LsaAddAccountRights(
-                PolicyHandle,       // open policy handle
-                AccountSid,         // target SID
-                &PrivilegeString,   // privileges
-                1                   // privilege count
-                );
-    }
-    else {
+                   PolicyHandle,       // open policy handle
+                   AccountSid,         // target SID
+                   &PrivilegeString,   // privileges
+                   1                   // privilege count
+               );
+    } else {
         return LsaRemoveAccountRights(
-                PolicyHandle,       // open policy handle
-                AccountSid,         // target SID
-                FALSE,              // do not disable all rights
-                &PrivilegeString,   // privileges
-                1                   // privilege count
-                );
+                   PolicyHandle,       // open policy handle
+                   AccountSid,         // target SID
+                   FALSE,              // do not disable all rights
+                   &PrivilegeString,   // privileges
+                   1                   // privilege count
+               );
     }
 }
 
@@ -175,11 +170,11 @@ void
 InitLsaString(
     PLSA_UNICODE_STRING LsaString,
     LPWSTR String
-    )
+)
 {
     DWORD StringLength;
 
-    if(String == NULL) {
+    if (String == NULL) {
         LsaString->Buffer = NULL;
         LsaString->Length = 0;
         LsaString->MaximumLength = 0;
@@ -189,7 +184,7 @@ InitLsaString(
     StringLength = lstrlenW(String);
     LsaString->Buffer = String;
     LsaString->Length = (USHORT) StringLength * sizeof(WCHAR);
-    LsaString->MaximumLength=(USHORT)(StringLength+1) * sizeof(WCHAR);
+    LsaString->MaximumLength = (USHORT)(StringLength + 1) * sizeof(WCHAR);
 }
 
 NTSTATUS
@@ -197,12 +192,11 @@ OpenPolicy(
     LPWSTR ServerName,
     DWORD DesiredAccess,
     PLSA_HANDLE PolicyHandle
-    )
+)
 {
     LSA_OBJECT_ATTRIBUTES ObjectAttributes;
     LSA_UNICODE_STRING ServerString;
     PLSA_UNICODE_STRING Server;
-
     //
     // Always initialize the object attributes to all zeroes.
     //
@@ -222,11 +216,11 @@ OpenPolicy(
     // Attempt to open the policy.
     //
     return LsaOpenPolicy(
-                Server,
-                &ObjectAttributes,
-                DesiredAccess,
-                PolicyHandle
-                );
+               Server,
+               &ObjectAttributes,
+               DesiredAccess,
+               PolicyHandle
+           );
 }
 
 
@@ -235,38 +229,34 @@ GrantUserRight(
     PSID    psidAccountSid,
     LPWSTR  pszUserRight,
     BOOL    bEnable
-    )
+)
 {
     LSA_HANDLE  PolicyHandle = NULL;
     NTSTATUS    Status;
-
     //
     // Open the policy on the local host.
     //
     Status = OpenPolicy(
-                _T(""),
-                POLICY_ALL_ACCESS,
-                &PolicyHandle
-                );
+                 _T(""),
+                 POLICY_ALL_ACCESS,
+                 &PolicyHandle
+             );
 
-
-    if(Status != STATUS_SUCCESS) {
+    if (Status != STATUS_SUCCESS) {
         return FALSE;
     }
-
 
     //
     // Grant the requested user right represented by psidAccountSid.
     //
     Status = SetPrivilegeOnAccount(
-                PolicyHandle,                   // policy handle
-                psidAccountSid,                 // SID to grant privilege
-                pszUserRight,                   // Unicode privilege
-                bEnable                         // enable the privilege
-                );
+                 PolicyHandle,                   // policy handle
+                 psidAccountSid,                 // SID to grant privilege
+                 pszUserRight,                   // Unicode privilege
+                 bEnable                         // enable the privilege
+             );
 
-    if(Status != STATUS_SUCCESS)
-    {
+    if (Status != STATUS_SUCCESS) {
         LsaClose(PolicyHandle);
         return FALSE;
     }

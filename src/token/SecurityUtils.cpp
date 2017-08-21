@@ -540,8 +540,7 @@ GetCurrentUserSID(
                                 tokenUser,
                                 tokenSize,
                                 &tokenSize)) {
-            sidLength = GetLengthSid(tokenUser->User.Sid);          
-
+            sidLength = GetLengthSid(tokenUser->User.Sid);
             *Sid = (PSID) malloc(sidLength);
             memcpy(*Sid, tokenUser->User.Sid, sidLength);
             CloseHandle(tokenHandle);
@@ -1198,29 +1197,26 @@ ChangeAppIDLaunchACL(
 
 
 DWORD
-CopyACL (
-         PACL OldACL,
-         PACL NewACL
-         )
+CopyACL(
+    PACL OldACL,
+    PACL NewACL
+)
 {
     ACL_SIZE_INFORMATION  aclSizeInfo;
     LPVOID                ace = NULL;
     ACE_HEADER            *aceHeader = NULL;
     ULONG                 i = 0;
-
-    GetAclInformation (OldACL, (LPVOID) &aclSizeInfo, (DWORD) sizeof (aclSizeInfo), AclSizeInformation);
+    GetAclInformation(OldACL, (LPVOID) &aclSizeInfo, (DWORD) sizeof(aclSizeInfo), AclSizeInformation);
 
     //
     // Copy all of the ACEs to the new ACL
     //
 
-    for (i = 0; i < aclSizeInfo.AceCount; i++)
-    {
+    for (i = 0; i < aclSizeInfo.AceCount; i++) {
         //
         // Get the ACE and header info
         //
-
-        if (!GetAce (OldACL, i, &ace))
+        if (!GetAce(OldACL, i, &ace))
             return GetLastError();
 
         aceHeader = (ACE_HEADER *) ace;
@@ -1229,7 +1225,7 @@ CopyACL (
         // Add the ACE to the new list
         //
 
-        if (!AddAce (NewACL, ACL_REVISION, 0xffffffff, ace, aceHeader->AceSize))
+        if (!AddAce(NewACL, ACL_REVISION, 0xffffffff, ace, aceHeader->AceSize))
             return GetLastError();
     }
 
@@ -1237,116 +1233,106 @@ CopyACL (
 }
 
 DWORD
-AddAccessDeniedACEToACL (
-                         PACL *Acl,
-                         DWORD PermissionMask,
-                         LPTSTR Principal
-                         )
+AddAccessDeniedACEToACL(
+    PACL *Acl,
+    DWORD PermissionMask,
+    LPTSTR Principal
+)
 {
     ACL_SIZE_INFORMATION  aclSizeInfo;
     int                   aclSize = 0;
     DWORD                 returnValue = 0;
     PSID                  principalSID = 0;
     PACL                  oldACL = NULL, newACL = NULL;
-
     oldACL = *Acl;
 
-    if (!GetAccountSid(NULL, Principal, &principalSID))
-    {
+    if (!GetAccountSid(NULL, Principal, &principalSID)) {
         return GetLastError();
     }
 
-    GetAclInformation (oldACL, (LPVOID) &aclSizeInfo, (DWORD) sizeof (ACL_SIZE_INFORMATION), AclSizeInformation);
-
+    GetAclInformation(oldACL, (LPVOID) &aclSizeInfo, (DWORD) sizeof(ACL_SIZE_INFORMATION), AclSizeInformation);
     aclSize = aclSizeInfo.AclBytesInUse +
-        sizeof (ACL) + sizeof (ACCESS_DENIED_ACE) +
-        GetLengthSid (principalSID) - sizeof (DWORD);
-
+              sizeof(ACL) + sizeof(ACCESS_DENIED_ACE) +
+              GetLengthSid(principalSID) - sizeof(DWORD);
     newACL = (PACL) new BYTE [aclSize];
 
-    if (!InitializeAcl (newACL, aclSize, ACL_REVISION))
-    {
+    if (!InitializeAcl(newACL, aclSize, ACL_REVISION)) {
         HeapFree(GetProcessHeap(), 0, principalSID);
         return GetLastError();
     }
 
-    if (!AddAccessDeniedAce (newACL, ACL_REVISION2, PermissionMask, principalSID))
-    {
+    if (!AddAccessDeniedAce(newACL, ACL_REVISION2, PermissionMask, principalSID)) {
         HeapFree(GetProcessHeap(), 0, principalSID);
         return GetLastError();
     }
 
-    returnValue = CopyACL (oldACL, newACL);
-    if (returnValue != ERROR_SUCCESS)
-    {
+    returnValue = CopyACL(oldACL, newACL);
+
+    if (returnValue != ERROR_SUCCESS) {
         HeapFree(GetProcessHeap(), 0, principalSID);
         return returnValue;
     }
 
     *Acl = newACL;
 
-    if(principalSID != NULL) HeapFree(GetProcessHeap(), 0, principalSID);
+    if (principalSID != NULL) HeapFree(GetProcessHeap(), 0, principalSID);
+
     return ERROR_SUCCESS;
 }
 
 DWORD
-AddAccessAllowedACEToACL (
-                          PACL *Acl,
-                          DWORD PermissionMask,
-                          LPTSTR Principal
-                          )
+AddAccessAllowedACEToACL(
+    PACL *Acl,
+    DWORD PermissionMask,
+    LPTSTR Principal
+)
 {
     ACL_SIZE_INFORMATION  aclSizeInfo;
     int                   aclSize = 0;
     DWORD                 returnValue = 0;
     PSID                  principalSID = NULL;
     PACL                  oldACL = NULL, newACL = NULL;
-
     oldACL = *Acl;
 
-    if (!GetAccountSid(NULL, Principal, &principalSID))
-    {
+    if (!GetAccountSid(NULL, Principal, &principalSID)) {
         return GetLastError();
     }
 
-    GetAclInformation (oldACL, (LPVOID) &aclSizeInfo, (DWORD) sizeof (ACL_SIZE_INFORMATION), AclSizeInformation);
-
+    GetAclInformation(oldACL, (LPVOID) &aclSizeInfo, (DWORD) sizeof(ACL_SIZE_INFORMATION), AclSizeInformation);
     aclSize = aclSizeInfo.AclBytesInUse +
-        sizeof (ACL) + sizeof (ACCESS_ALLOWED_ACE) +
-        GetLengthSid (principalSID) - sizeof (DWORD);
-
+              sizeof(ACL) + sizeof(ACCESS_ALLOWED_ACE) +
+              GetLengthSid(principalSID) - sizeof(DWORD);
     newACL = (PACL) new BYTE [aclSize];
 
-    if (!InitializeAcl (newACL, aclSize, ACL_REVISION))
-    {
+    if (!InitializeAcl(newACL, aclSize, ACL_REVISION)) {
         HeapFree(GetProcessHeap(), 0, principalSID);
         return GetLastError();
     }
 
-    returnValue = CopyACL (oldACL, newACL);
-    if (returnValue != ERROR_SUCCESS)
-    {
+    returnValue = CopyACL(oldACL, newACL);
+
+    if (returnValue != ERROR_SUCCESS) {
         HeapFree(GetProcessHeap(), 0, principalSID);
         return returnValue;
     }
 
-    if (!AddAccessAllowedAce (newACL, ACL_REVISION2, PermissionMask, principalSID))
-    {
+    if (!AddAccessAllowedAce(newACL, ACL_REVISION2, PermissionMask, principalSID)) {
         HeapFree(GetProcessHeap(), 0, principalSID);
         return GetLastError();
     }
 
     *Acl = newACL;
 
-    if(principalSID != NULL) HeapFree(GetProcessHeap(), 0, principalSID);
+    if (principalSID != NULL) HeapFree(GetProcessHeap(), 0, principalSID);
+
     return ERROR_SUCCESS;
 }
 
 DWORD
-RemovePrincipalFromACL (
-                        PACL Acl,
-                        LPTSTR Principal
-                        )
+RemovePrincipalFromACL(
+    PACL Acl,
+    LPTSTR Principal
+)
 {
     ACL_SIZE_INFORMATION    aclSizeInfo;
     ULONG                   i = 0;
@@ -1358,151 +1344,136 @@ RemovePrincipalFromACL (
     DWORD                   returnValue = 0;
     ACE_HEADER              *aceHeader = NULL;
 
-    if (!GetAccountSid(NULL, Principal, &principalSID))
-    {
+    if (!GetAccountSid(NULL, Principal, &principalSID)) {
         return GetLastError();
     }
 
-    GetAclInformation (Acl, (LPVOID) &aclSizeInfo, (DWORD) sizeof (ACL_SIZE_INFORMATION), AclSizeInformation);
+    GetAclInformation(Acl, (LPVOID) &aclSizeInfo, (DWORD) sizeof(ACL_SIZE_INFORMATION), AclSizeInformation);
 
-    for (i = 0; i < aclSizeInfo.AceCount; i++)
-    {
-        if (!GetAce (Acl, i, &ace))
-        {
+    for (i = 0; i < aclSizeInfo.AceCount; i++) {
+        if (!GetAce(Acl, i, &ace)) {
             HeapFree(GetProcessHeap(), 0, principalSID);
             return GetLastError();
         }
 
         aceHeader = (ACE_HEADER *) ace;
 
-        if (aceHeader->AceType == ACCESS_ALLOWED_ACE_TYPE)
-        {
+        if (aceHeader->AceType == ACCESS_ALLOWED_ACE_TYPE) {
             accessAllowedAce = (ACCESS_ALLOWED_ACE *) ace;
 
-            if (EqualSid (principalSID, (PSID) &accessAllowedAce->SidStart))
-            {
-                DeleteAce (Acl, i);
+            if (EqualSid(principalSID, (PSID) &accessAllowedAce->SidStart)) {
+                DeleteAce(Acl, i);
                 HeapFree(GetProcessHeap(), 0, principalSID);
                 return ERROR_SUCCESS;
             }
-        } else
+        } else if (aceHeader->AceType == ACCESS_DENIED_ACE_TYPE) {
+            accessDeniedAce = (ACCESS_DENIED_ACE *) ace;
 
-            if (aceHeader->AceType == ACCESS_DENIED_ACE_TYPE)
-            {
-                accessDeniedAce = (ACCESS_DENIED_ACE *) ace;
+            if (EqualSid(principalSID, (PSID) &accessDeniedAce->SidStart)) {
+                DeleteAce(Acl, i);
+                HeapFree(GetProcessHeap(), 0, principalSID);
+                return ERROR_SUCCESS;
+            }
+        } else if (aceHeader->AceType == SYSTEM_AUDIT_ACE_TYPE) {
+            systemAuditAce = (SYSTEM_AUDIT_ACE *) ace;
 
-                if (EqualSid (principalSID, (PSID) &accessDeniedAce->SidStart))
-                {
-                    DeleteAce (Acl, i);
-                    HeapFree(GetProcessHeap(), 0, principalSID);
-                    return ERROR_SUCCESS;
-                }
-            } else
-
-                if (aceHeader->AceType == SYSTEM_AUDIT_ACE_TYPE)
-                {
-                    systemAuditAce = (SYSTEM_AUDIT_ACE *) ace;
-
-                    if (EqualSid (principalSID, (PSID) &systemAuditAce->SidStart))
-                    {
-                        DeleteAce (Acl, i);
-                        HeapFree(GetProcessHeap(), 0, principalSID);
-                        return ERROR_SUCCESS;
-                    }
-                }
+            if (EqualSid(principalSID, (PSID) &systemAuditAce->SidStart)) {
+                DeleteAce(Acl, i);
+                HeapFree(GetProcessHeap(), 0, principalSID);
+                return ERROR_SUCCESS;
+            }
+        }
     }
 
-    if(principalSID != NULL) HeapFree(GetProcessHeap(), 0, principalSID);
+    if (principalSID != NULL) HeapFree(GetProcessHeap(), 0, principalSID);
+
     return ERROR_SUCCESS;
 }
 
 
 BOOL
 GetAccountSid(
-              LPCTSTR SystemName,
-              LPCTSTR AccountName,
-              PSID *Sid
-              )
+    LPCTSTR SystemName,
+    LPCTSTR AccountName,
+    PSID *Sid
+)
 {
-    LPTSTR ReferencedDomain=NULL;
-    DWORD cbSid=128;    // initial allocation attempt
-    DWORD cchReferencedDomain=16; // initial allocation size
+    LPTSTR ReferencedDomain = NULL;
+    DWORD cbSid = 128;  // initial allocation attempt
+    DWORD cchReferencedDomain = 16; // initial allocation size
     SID_NAME_USE peUse;
-    BOOL bSuccess=FALSE; // assume this function will fail
+    BOOL bSuccess = FALSE; // assume this function will fail
 
     __try {
-
         //
         // initial memory allocations
         //
         *Sid = (PSID)HeapAlloc(GetProcessHeap(), 0, cbSid);
 
-        if(*Sid == NULL) __leave;
+        if (*Sid == NULL) __leave;
 
         ReferencedDomain = (LPTSTR)HeapAlloc(
-            GetProcessHeap(),
-            0,
-            cchReferencedDomain * sizeof(TCHAR)
-            );
+                               GetProcessHeap(),
+                               0,
+                               cchReferencedDomain * sizeof(TCHAR)
+                           );
 
-        if(ReferencedDomain == NULL) __leave;
+        if (ReferencedDomain == NULL) __leave;
 
         //
         // Obtain the SID of the specified account on the specified system.
         //
-        while(!LookupAccountName(
-            SystemName,         // machine to lookup account on
-            AccountName,        // account to lookup
-            *Sid,               // SID of interest
-            &cbSid,             // size of SID
-            ReferencedDomain,   // domain account was found on
-            &cchReferencedDomain,
-            &peUse
-            )) {
-                if (GetLastError() == ERROR_INSUFFICIENT_BUFFER) {
-                    //
-                    // reallocate memory
-                    //
-                    *Sid = (PSID)HeapReAlloc(
-                        GetProcessHeap(),
-                        0,
-                        *Sid,
-                        cbSid
-                        );
-                    if(*Sid == NULL) __leave;
+        while (!LookupAccountName(
+                   SystemName,         // machine to lookup account on
+                   AccountName,        // account to lookup
+                   *Sid,               // SID of interest
+                   &cbSid,             // size of SID
+                   ReferencedDomain,   // domain account was found on
+                   &cchReferencedDomain,
+                   &peUse
+               )) {
+            if (GetLastError() == ERROR_INSUFFICIENT_BUFFER) {
+                //
+                // reallocate memory
+                //
+                *Sid = (PSID)HeapReAlloc(
+                           GetProcessHeap(),
+                           0,
+                           *Sid,
+                           cbSid
+                       );
 
-                    ReferencedDomain = (LPTSTR)HeapReAlloc(
-                        GetProcessHeap(),
-                        0,
-                        ReferencedDomain,
-                        cchReferencedDomain * sizeof(TCHAR)
-                        );
-                    if(ReferencedDomain == NULL) __leave;
-                }
-                else __leave;
+                if (*Sid == NULL) __leave;
+
+                ReferencedDomain = (LPTSTR)HeapReAlloc(
+                                       GetProcessHeap(),
+                                       0,
+                                       ReferencedDomain,
+                                       cchReferencedDomain * sizeof(TCHAR)
+                                   );
+
+                if (ReferencedDomain == NULL) __leave;
+            } else __leave;
         }
 
         //
         // Indicate success.
         //
         bSuccess = TRUE;
-
     } // try
-    __finally {
 
+    __finally {
         //
         // Cleanup and indicate failure, if appropriate.
         //
-
         HeapFree(GetProcessHeap(), 0, ReferencedDomain);
 
-        if(!bSuccess) {
-            if(*Sid != NULL) {
+        if (!bSuccess) {
+            if (*Sid != NULL) {
                 HeapFree(GetProcessHeap(), 0, *Sid);
                 *Sid = NULL;
             }
         }
-
     } // finally
 
     return bSuccess;
@@ -1519,101 +1490,101 @@ CZElevation::~CZElevation()
 BOOL CZElevation::GetProcessElevation(TOKEN_ELEVATION_TYPE* pElevationType, BOOL* pIsAdmin)
 {
     HANDLE hToken = NULL;
-    DWORD dwSize; 
+    DWORD dwSize;
 
     // Get current process token
     if (!OpenProcessToken(GetCurrentProcess(), TOKEN_QUERY, &hToken))
-        return(FALSE);
+        return (FALSE);
 
     BOOL bResult = FALSE;
 
-    // Retrieve elevation type information 
-    if (GetTokenInformation(hToken, TokenElevationType, 
-        pElevationType, sizeof(TOKEN_ELEVATION_TYPE), &dwSize)) {
-            // Create the SID corresponding to the Administrators group
-            byte adminSID[SECURITY_MAX_SID_SIZE];
-            dwSize = sizeof(adminSID);
-            CreateWellKnownSid(WinBuiltinAdministratorsSid, NULL, &adminSID, 
-                &dwSize);
+    // Retrieve elevation type information
+    if (GetTokenInformation(hToken, TokenElevationType,
+                            pElevationType, sizeof(TOKEN_ELEVATION_TYPE), &dwSize)) {
+        // Create the SID corresponding to the Administrators group
+        byte adminSID[SECURITY_MAX_SID_SIZE];
+        dwSize = sizeof(adminSID);
+        CreateWellKnownSid(WinBuiltinAdministratorsSid, NULL, &adminSID,
+                           &dwSize);
 
-            if (*pElevationType == TokenElevationTypeLimited) {
-                // Get handle to linked token (will have one if we are lua)
-                HANDLE hUnfilteredToken = NULL;
-                GetTokenInformation(hToken, TokenLinkedToken, (VOID*) 
-                    &hUnfilteredToken, sizeof(HANDLE), &dwSize);
+        if (*pElevationType == TokenElevationTypeLimited) {
+            // Get handle to linked token (will have one if we are lua)
+            HANDLE hUnfilteredToken = NULL;
+            GetTokenInformation(hToken, TokenLinkedToken, (VOID*)
+                                &hUnfilteredToken, sizeof(HANDLE), &dwSize);
 
-                // Check if this original token contains admin SID
-                if (CheckTokenMembership(hUnfilteredToken, &adminSID, pIsAdmin)) {
-                    bResult = TRUE;
-                }
-
-                // Don't forget to close the unfiltered token
-                CloseHandle(hUnfilteredToken);
-            } else {
-                *pIsAdmin = IsUserAnAdmin();
+            // Check if this original token contains admin SID
+            if (CheckTokenMembership(hUnfilteredToken, &adminSID, pIsAdmin)) {
                 bResult = TRUE;
             }
+
+            // Don't forget to close the unfiltered token
+            CloseHandle(hUnfilteredToken);
+        } else {
+            *pIsAdmin = IsUserAnAdmin();
+            bResult = TRUE;
+        }
     }
 
     // Don't forget to close the process token
     CloseHandle(hToken);
-
-    return(bResult);
+    return (bResult);
 }
 
 DWORD CZElevation::StartElevatedProcess(LPCTSTR szExecutable, LPCTSTR szCmdLine)
 {
     // Initialize the structure.
     SHELLEXECUTEINFO sei = { sizeof(SHELLEXECUTEINFO) };
-
     // Ask for privileges elevation.
     sei.lpVerb = TEXT("runas");
-
     // Pass the application to start with high privileges.
     sei.lpFile = szExecutable;
-
     // Pass the command line.
     sei.lpParameters = szCmdLine;
-
     // Don't forget this parameter otherwise the window will be hidden.
     //sei.nShow = SW_SHOWNORMAL;
-
     ShellExecuteEx(&sei);
-    return(GetLastError());
+    return (GetLastError());
 }
 
 
-BOOL IsElevated( ) {
+BOOL IsElevated()
+{
     BOOL fRet = FALSE;
     HANDLE hToken = NULL;
-    if( OpenProcessToken( GetCurrentProcess(),TOKEN_QUERY,&hToken) ) {
+
+    if (OpenProcessToken(GetCurrentProcess(), TOKEN_QUERY, &hToken)) {
         TOKEN_ELEVATION Elevation;
         DWORD cbSize = sizeof(TOKEN_ELEVATION);
-        if( GetTokenInformation( hToken, TokenElevation, &Elevation, sizeof(Elevation), &cbSize ) ) {
+
+        if (GetTokenInformation(hToken, TokenElevation, &Elevation, sizeof(Elevation), &cbSize)) {
             fRet = Elevation.TokenIsElevated;
         }
     }
-    if(hToken) {
+
+    if (hToken) {
         CloseHandle(hToken);
     }
+
     return fRet;
 }
 
 #ifndef SUCCESS
-#define SUCCESS 0
+    #define SUCCESS 0
 #endif
 #ifndef FAILURE
-#define FAILURE 1
+    #define FAILURE 1
 #endif
 
 // DebugMode (BOOL)
-// activates the debug mode for the current process 
+// activates the debug mode for the current process
 // requires the privilege to be 'ENABLED'
 // returns FAILURE on failure, and SUCCESS on success
 
-int DebugMode(BOOL bToggle) {
+int DebugMode(BOOL bToggle)
+{
     HANDLE hToken;
-    DWORD cbTokPriv = sizeof (TOKEN_PRIVILEGES);
+    DWORD cbTokPriv = sizeof(TOKEN_PRIVILEGES);
     static TOKEN_PRIVILEGES tpGodModeActivated, tpOriginalMode;
 
     if (bToggle) {
@@ -1622,29 +1593,28 @@ int DebugMode(BOOL bToggle) {
         LookupPrivilegeValue(NULL, SE_DEBUG_NAME, &tpGodModeActivated.Privileges[0].Luid);
 
         if (!OpenProcessToken(GetCurrentProcess(),
-            TOKEN_QUERY | TOKEN_ADJUST_PRIVILEGES, &hToken)) {
-                return FAILURE;
+                              TOKEN_QUERY | TOKEN_ADJUST_PRIVILEGES, &hToken)) {
+            return FAILURE;
         }
 
-        if (!AdjustTokenPrivileges(hToken, FALSE, &tpGodModeActivated, sizeof (tpGodModeActivated),
-            &tpOriginalMode, &cbTokPriv) != ERROR_SUCCESS) {
-                CloseHandle(hToken);
-                return FAILURE;
+        if (!AdjustTokenPrivileges(hToken, FALSE, &tpGodModeActivated, sizeof(tpGodModeActivated),
+                                   &tpOriginalMode, &cbTokPriv) != ERROR_SUCCESS) {
+            CloseHandle(hToken);
+            return FAILURE;
         }
+
         CloseHandle(hToken);
-    }
-    else {
-
+    } else {
         if (!OpenProcessToken(GetCurrentProcess(),
-            TOKEN_QUERY | TOKEN_ADJUST_PRIVILEGES, &hToken)) {
-                return FAILURE;
-        }
-        if (AdjustTokenPrivileges(hToken, FALSE, &tpOriginalMode, sizeof (tpOriginalMode), NULL, NULL)
-            != ERROR_SUCCESS) {
-                CloseHandle(hToken);
-                return FAILURE;
+                              TOKEN_QUERY | TOKEN_ADJUST_PRIVILEGES, &hToken)) {
+            return FAILURE;
         }
 
+        if (AdjustTokenPrivileges(hToken, FALSE, &tpOriginalMode, sizeof(tpOriginalMode), NULL, NULL)
+            != ERROR_SUCCESS) {
+            CloseHandle(hToken);
+            return FAILURE;
+        }
     }
 
     return SUCCESS;
@@ -1652,12 +1622,12 @@ int DebugMode(BOOL bToggle) {
 
 
 
-std::wstring GetSIDForCurrentUser() 
+std::wstring GetSIDForCurrentUser()
 {
     ATL::CHandle processHandle(GetCurrentProcess());
     HANDLE tokenHandle;
-    if(OpenProcessToken(processHandle,TOKEN_READ,&tokenHandle) == FALSE) {
-        
+
+    if (OpenProcessToken(processHandle, TOKEN_READ, &tokenHandle) == FALSE) {
         return L"";
     }
 
@@ -1666,14 +1636,178 @@ std::wstring GetSIDForCurrentUser()
     GetTokenInformation(tokenHandle, TOKEN_INFORMATION_CLASS::TokenUser, NULL, 0, &userTokenSize);
     userToken = (PTOKEN_USER) HeapAlloc(GetProcessHeap(), HEAP_ZERO_MEMORY, userTokenSize);
     GetTokenInformation(tokenHandle, TOKEN_INFORMATION_CLASS::TokenUser, userToken, userTokenSize, &userTokenSize);
-
     LPTSTR simpleSidString;
     ConvertSidToStringSid(userToken->User.Sid, &simpleSidString);
     std::wstring sidString = std::wstring(simpleSidString);
-
     LocalFree(simpleSidString); // as per documentation of ConvertSidToStringSid
     HeapFree(GetProcessHeap(), 0, userToken);
     CloseHandle(tokenHandle);
-
     return sidString;
+}
+
+
+
+BOOL IsUserAdmin()
+
+{
+    BOOL flag;
+    SID_IDENTIFIER_AUTHORITY NtAuthority = SECURITY_NT_AUTHORITY;
+    PSID AdministratorsGroup;
+    flag = AllocateAndInitializeSid(
+        &NtAuthority,
+        2,
+        SECURITY_BUILTIN_DOMAIN_RID,
+        DOMAIN_ALIAS_RID_ADMINS,
+        0, 0, 0, 0, 0, 0,
+        &AdministratorsGroup);
+    if (flag)
+    {
+        if (!CheckTokenMembership(NULL, AdministratorsGroup, &flag))
+        {
+            flag = FALSE;
+        }
+        FreeSid(AdministratorsGroup);
+    }
+
+    return flag;
+}
+
+
+/*
+ * Returns nonzero if the current user has administrative privileges,
+ * or zero if not.
+ *
+ * Note: this cannot use ereport() because it's called too early during
+ * startup.
+ */
+int
+pgwin32_is_admin(void)
+{
+	PSID		AdministratorsSid;
+	PSID		PowerUsersSid;
+	SID_IDENTIFIER_AUTHORITY NtAuthority = {SECURITY_NT_AUTHORITY};
+	BOOL		IsAdministrators;
+	BOOL		IsPowerUsers;
+
+	if (!AllocateAndInitializeSid(&NtAuthority, 2,
+								  SECURITY_BUILTIN_DOMAIN_RID,
+								  DOMAIN_ALIAS_RID_ADMINS, 0, 0, 0, 0, 0,
+								  0, &AdministratorsSid))
+	{
+		/*log_error(_("could not get SID for Administrators group: error code %lu\n"),
+				  GetLastError());*/
+		exit(1);
+	}
+
+	if (!AllocateAndInitializeSid(&NtAuthority, 2,
+								  SECURITY_BUILTIN_DOMAIN_RID,
+								  DOMAIN_ALIAS_RID_POWER_USERS, 0, 0, 0, 0, 0,
+								  0, &PowerUsersSid))
+	{
+		/*log_error(_("could not get SID for PowerUsers group: error code %lu\n"),
+				  GetLastError());*/
+		exit(1);
+	}
+
+	if (!CheckTokenMembership(NULL, AdministratorsSid, &IsAdministrators) ||
+		!CheckTokenMembership(NULL, PowerUsersSid, &IsPowerUsers))
+	{
+		/*log_error(_("could not check access token membership: error code %lu\n"),
+				  GetLastError());*/
+		exit(1);
+	}
+
+	FreeSid(AdministratorsSid);
+	FreeSid(PowerUsersSid);
+
+	if (IsAdministrators || IsPowerUsers)
+		return 1;
+	else
+		return 0;
+}
+
+/*
+ * We consider ourselves running as a service if one of the following is
+ * true:
+ *
+ * 1) We are running as LocalSystem (only used by services)
+ * 2) Our token contains SECURITY_SERVICE_RID (automatically added to the
+ *	  process token by the SCM when starting a service)
+ *
+ * The check for LocalSystem is needed, because surprisingly, if a service
+ * is running as LocalSystem, it does not have SECURITY_SERVICE_RID in its
+ * process token.
+ *
+ * Return values:
+ *	 0 = Not service
+ *	 1 = Service
+ *	-1 = Error
+ *
+ * Note: we can't report errors via either ereport (we're called too early
+ * in the backend) or write_stderr (because that calls this).  We are
+ * therefore reduced to writing directly on stderr, which sucks, but we
+ * have few alternatives.
+ */
+int
+pgwin32_is_service(void)
+{
+	static int	_is_service = -1;
+	BOOL		IsMember;
+	PSID		ServiceSid;
+	PSID		LocalSystemSid;
+	SID_IDENTIFIER_AUTHORITY NtAuthority = {SECURITY_NT_AUTHORITY};
+
+	/* Only check the first time */
+	if (_is_service != -1)
+		return _is_service;
+
+	/* First check for LocalSystem */
+	if (!AllocateAndInitializeSid(&NtAuthority, 1,
+								  SECURITY_LOCAL_SYSTEM_RID, 0, 0, 0, 0, 0, 0, 0,
+								  &LocalSystemSid))
+	{
+		fprintf(stderr, "could not get SID for local system account\n");
+		return -1;
+	}
+
+	if (!CheckTokenMembership(NULL, LocalSystemSid, &IsMember))
+	{
+		fprintf(stderr, "could not check access token membership: error code %lu\n",
+				GetLastError());
+		FreeSid(LocalSystemSid);
+		return -1;
+	}
+	FreeSid(LocalSystemSid);
+
+	if (IsMember)
+	{
+		_is_service = 1;
+		return _is_service;
+	}
+
+	/* Check for service group membership */
+	if (!AllocateAndInitializeSid(&NtAuthority, 1,
+								  SECURITY_SERVICE_RID, 0, 0, 0, 0, 0, 0, 0,
+								  &ServiceSid))
+	{
+		fprintf(stderr, "could not get SID for service group: error code %lu\n",
+				GetLastError());
+		return -1;
+	}
+
+	if (!CheckTokenMembership(NULL, ServiceSid, &IsMember))
+	{
+		fprintf(stderr, "could not check access token membership: error code %lu\n",
+				GetLastError());
+		FreeSid(ServiceSid);
+		return -1;
+	}
+	FreeSid(ServiceSid);
+
+	if (IsMember)
+		_is_service = 1;
+	else
+		_is_service = 0;
+
+	return _is_service;
 }

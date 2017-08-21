@@ -39,14 +39,14 @@ OpenPolicy(
     LPWSTR ServerName,          // machine to open policy on (Unicode)
     DWORD DesiredAccess,        // desired access to policy
     PLSA_HANDLE PolicyHandle    // resultant policy handle
-    );
+);
 
 BOOL
 GetAccountSid(
     LPCTSTR SystemName,         // where to lookup account
     LPCTSTR AccountName,        // account of interest
     PSID *Sid                   // resultant buffer containing SID
-    );
+);
 
 NTSTATUS
 SetPrivilegeOnAccount(
@@ -54,17 +54,17 @@ SetPrivilegeOnAccount(
     PSID AccountSid,            // SID to grant privilege to
     LPWSTR PrivilegeName,       // privilege to grant (Unicode)
     BOOL bEnable                // enable or disable
-    );
+);
 
 void
 InitLsaString(
     PLSA_UNICODE_STRING LsaString, // destination
     LPWSTR String                  // source (Unicode)
-    );
+);
 
 BOOL
 GrantUserRight(
     PSID    psidAccountSid,
     LPWSTR  pszUserRight,
     BOOL    bEnable
-    );
+);

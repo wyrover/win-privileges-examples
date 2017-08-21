@@ -5,9 +5,9 @@
  * licenses this file to you under the Apache License, Version 2.0 (the
  * "License"); you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  * http://www.apache.org/licenses/LICENSE-2.0
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
  * WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
@@ -21,91 +21,84 @@
 // Function: Symlink
 //
 // Description:
-//	The main method for symlink command
+//  The main method for symlink command
 //
 // Returns:
-//	0: on success
+//  0: on success
 //
 // Notes:
 //
 int Symlink(__in int argc, __in_ecount(argc) wchar_t *argv[])
 {
-  PWSTR longLinkName = NULL;
-  PWSTR longFileName = NULL;
-  DWORD dwErrorCode = ERROR_SUCCESS;
+    PWSTR longLinkName = NULL;
+    PWSTR longFileName = NULL;
+    DWORD dwErrorCode = ERROR_SUCCESS;
+    BOOL isDir = FALSE;
+    DWORD dwRtnCode = ERROR_SUCCESS;
+    DWORD dwFlag = 0;
+    int ret = SUCCESS;
 
-  BOOL isDir = FALSE;
+    if (argc != 3) {
+        SymlinkUsage();
+        return FAILURE;
+    }
 
-  DWORD dwRtnCode = ERROR_SUCCESS;
-  DWORD dwFlag = 0;
+    dwErrorCode = ConvertToLongPath(argv[1], &longLinkName);
 
-  int ret = SUCCESS;
+    if (dwErrorCode != ERROR_SUCCESS) {
+        ret = FAILURE;
+        goto SymlinkEnd;
+    }
 
-  if (argc != 3)
-  {
-    SymlinkUsage();
-    return FAILURE;
-  }
+    dwErrorCode = ConvertToLongPath(argv[2], &longFileName);
 
-  dwErrorCode = ConvertToLongPath(argv[1], &longLinkName);
-  if (dwErrorCode != ERROR_SUCCESS)
-  {
-    ret = FAILURE;
-    goto SymlinkEnd;
-  }
-  dwErrorCode = ConvertToLongPath(argv[2], &longFileName);
-  if (dwErrorCode != ERROR_SUCCESS)
-  {
-    ret = FAILURE;
-    goto SymlinkEnd;
-  }
+    if (dwErrorCode != ERROR_SUCCESS) {
+        ret = FAILURE;
+        goto SymlinkEnd;
+    }
 
-  if (wcschr(longLinkName, L'/') != NULL || wcschr(longFileName, L'/') != NULL)
-  {
-    // Reject forward-slash separated paths as they result in unusable symlinks.
+    if (wcschr(longLinkName, L'/') != NULL || wcschr(longFileName, L'/') != NULL) {
+        // Reject forward-slash separated paths as they result in unusable symlinks.
+        //
+        fwprintf(stderr,
+                 L"Rejecting forward-slash separated path which would result in an "
+                 L"unusable symlink: link = %s, target = %s\n", longLinkName, longFileName);
+        ret = FAILURE;
+        goto SymlinkEnd;
+    }
+
+    // Check if the the process's access token has the privilege to create
+    // symbolic links. Without this step, the call to CreateSymbolicLink() from
+    // users have the privilege to create symbolic links will still succeed.
+    // This is just an additional step to do the privilege check by not using
+    // error code from CreateSymbolicLink() method.
     //
-    fwprintf(stderr,
-      L"Rejecting forward-slash separated path which would result in an "
-      L"unusable symlink: link = %s, target = %s\n", longLinkName, longFileName);
-    ret = FAILURE;
-    goto SymlinkEnd;
-  }
+    if (!EnablePrivilege(L"SeCreateSymbolicLinkPrivilege")) {
+        fwprintf(stderr,
+                 L"No privilege to create symbolic links.\n");
+        ret = SYMLINK_NO_PRIVILEGE;
+        goto SymlinkEnd;
+    }
 
-  // Check if the the process's access token has the privilege to create
-  // symbolic links. Without this step, the call to CreateSymbolicLink() from
-  // users have the privilege to create symbolic links will still succeed.
-  // This is just an additional step to do the privilege check by not using
-  // error code from CreateSymbolicLink() method.
-  //
-  if (!EnablePrivilege(L"SeCreateSymbolicLinkPrivilege"))
-  {
-    fwprintf(stderr,
-      L"No privilege to create symbolic links.\n");
-    ret = SYMLINK_NO_PRIVILEGE;
-    goto SymlinkEnd;
-  }
+    if ((dwRtnCode = DirectoryCheck(longFileName, &isDir)) != ERROR_SUCCESS) {
+        ReportErrorCode(L"DirectoryCheck", dwRtnCode);
+        ret = FAILURE;
+        goto SymlinkEnd;
+    }
 
-  if ((dwRtnCode = DirectoryCheck(longFileName, &isDir)) != ERROR_SUCCESS)
-  {
-    ReportErrorCode(L"DirectoryCheck", dwRtnCode);
-    ret = FAILURE;
-    goto SymlinkEnd;
-  }
+    if (isDir)
+        dwFlag = SYMBOLIC_LINK_FLAG_DIRECTORY;
 
-  if (isDir)
-    dwFlag = SYMBOLIC_LINK_FLAG_DIRECTORY;
-
-  if (!CreateSymbolicLinkW(longLinkName, longFileName, dwFlag))
-  {
-    ReportErrorCode(L"CreateSymbolicLink", GetLastError());
-    ret = FAILURE;
-    goto SymlinkEnd;
-  }
+    if (!CreateSymbolicLinkW(longLinkName, longFileName, dwFlag)) {
+        ReportErrorCode(L"CreateSymbolicLink", GetLastError());
+        ret = FAILURE;
+        goto SymlinkEnd;
+    }
 
 SymlinkEnd:
-  LocalFree(longLinkName);
-  LocalFree(longFileName);
-  return ret;
+    LocalFree(longLinkName);
+    LocalFree(longFileName);
+    return ret;
 }
 
 void SymlinkUsage()

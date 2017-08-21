@@ -6,9 +6,9 @@
 
 /* -municode defines UNICODE but not _UNICODE */
 #ifndef UNICODE
-#    undef _UNICODE
+    #undef _UNICODE
 #elif !defined(_UNICODE)
-#    define _UNICODE
+    #define _UNICODE
 #endif
 
 /* Always-included headers */
@@ -20,29 +20,29 @@
 
 /* Define ARRAYSIZE if not found */
 #ifndef ARRAYSIZE
-#    define ARRAYSIZE(a) (sizeof(a)/sizeof((a)[0]))
+    #define ARRAYSIZE(a) (sizeof(a)/sizeof((a)[0]))
 #endif
 
 /* Stringify a value like an integer */
 #ifndef STR
-#    define _STR(x) #x
-#    define STR(x) _STR(x)
+    #define _STR(x) #x
+    #define STR(x) _STR(x)
 #endif
 
 /* Print format for ANSI and wide-char string in _tprintf */
 #if defined(UNICODE)
-#    define PRIsA "S"
-#    define PRIsW "s"
+    #define PRIsA "S"
+    #define PRIsW "s"
 #else
-#    define PRIsA "s"
-#    define PRIsW "S"
+    #define PRIsA "s"
+    #define PRIsW "S"
 #endif
 
 /* Print format for OLE strings (LPOLESTR, LPCOLESTR, BSTR) */
 #if defined(OLE2ANSI)
-#    define PRIsOLE PRIsA
+    #define PRIsOLE PRIsA
 #else
-#    define PRIsOLE PRIsW
+    #define PRIsOLE PRIsW
 #endif
 
 
@@ -54,28 +54,33 @@ static void print_winerr(LPCTSTR szMessage)
     DWORD dwLastErr;
     LPTSTR lpLastErrMsgBuf = NULL;
     TCHAR c;
-
     dwLastErr = GetLastError();
+
     if (!FormatMessage(
-        FORMAT_MESSAGE_ALLOCATE_BUFFER|FORMAT_MESSAGE_FROM_SYSTEM|FORMAT_MESSAGE_IGNORE_INSERTS,
-        NULL, dwLastErr,
-        MAKELANGID(LANG_NEUTRAL, SUBLANG_DEFAULT),
-        (LPTSTR)&lpLastErrMsgBuf, 0, NULL)
-    ) {
+            FORMAT_MESSAGE_ALLOCATE_BUFFER | FORMAT_MESSAGE_FROM_SYSTEM | FORMAT_MESSAGE_IGNORE_INSERTS,
+            NULL, dwLastErr,
+            MAKELANGID(LANG_NEUTRAL, SUBLANG_DEFAULT),
+            (LPTSTR)&lpLastErrMsgBuf, 0, NULL)
+       ) {
         lpLastErrMsgBuf = NULL;
     } else {
         /* Strip end of line */
         size_t len = _tcslen(lpLastErrMsgBuf);
-        while (len> 0) {
+
+        while (len > 0) {
             c = lpLastErrMsgBuf[--len];
+
             if (c != _T('\n') && c != _T('\r')) {
                 break;
             }
         }
+
         lpLastErrMsgBuf[len] = 0;
     }
+
     _ftprintf(stderr, _T("%s: error %lu, %s\n"), szMessage, dwLastErr,
               lpLastErrMsgBuf ? lpLastErrMsgBuf : _T("(unknown)"));
+
     if (lpLastErrMsgBuf) {
         LocalFree(lpLastErrMsgBuf);
     }
@@ -92,9 +97,11 @@ static LPCTSTR StringListNext(LPCTSTR str, LPCTSTR base, DWORD cchMax)
     LPCTSTR end;
     end = _tcsninc(base, cchMax);
     assert(base && base <= str && str < end);
+
     if (!str[0]) {
         return NULL;
     }
+
 #ifdef _tcscnlen
     cchLength = _tcscnlen(str, cchMax);
 #else
